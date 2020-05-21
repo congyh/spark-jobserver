@@ -21,6 +21,8 @@ object ZookeeperUtils {
   private val settings = Map(
     "baseFolder" -> "spark.jobserver.zookeeperdao.dir",
     "connectionString" -> "spark.jobserver.zookeeperdao.connection-string",
+    "authorizationScheme" -> "spark.jobserver.zookeeperdao.authorization-scheme",
+    "authorizationAuth" -> "spark.jobserver.zookeeperdao.authorization-auth",
     "retries" -> "spark.jobserver.zookeeperdao.curator.retries",
     "sleepBetweenRetries" -> "spark.jobserver.zookeeperdao.curator.sleepMsBetweenRetries",
     "connectionTimeout" -> "spark.jobserver.zookeeperdao.curator.connectionTimeoutMs",
@@ -43,6 +45,8 @@ class ZookeeperUtils(config: Config) extends YammerMetrics {
   }
 
   private val connectionString = config.getString(settings("connectionString"))
+  private val authorizationScheme = config.getString(settings("authorizationScheme"))
+  private val authorizationAuth = config.getString(settings("authorizationAuth"))
   private val baseFolder = config.getString(settings("baseFolder"))
   private val retries = config.getInt(settings("retries"))
   private val connectionTimeout = config.getInt(settings("connectionTimeout"))
@@ -52,6 +56,7 @@ class ZookeeperUtils(config: Config) extends YammerMetrics {
   def getClient: CuratorFramework = {
     val client = CuratorFrameworkFactory.builder.
       connectString(connectionString).
+      authorization(authorizationScheme, authorizationAuth.getBytes()).
       retryPolicy(new RetryNTimes(retries, sleepBetweenRetries)).
       namespace(baseFolder).
       connectionTimeoutMs(connectionTimeout).
