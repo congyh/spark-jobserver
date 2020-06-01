@@ -42,8 +42,14 @@ object LoadAndCacheTableJob extends BaseSparkSessionJob {
 
   private def prepareSparkSession(sc: SparkSession): Unit = {
     sc.conf.set("spark.sql.adaptive.enabled", "true")
-    sc.conf.set("spark.sql.autoBroadcastJoinThreshold", "178257920")
     sc.conf.set("spark.sql.files.ignoreCorruptFiles", "true")
+    sc.conf.set("spark.sql.autoBroadcastJoinThreshold", "178257920")
+    sc.conf.set("spark.sql.broadcastTimeout", "1800")
+
+    sc.conf.set("spark.shuffle.file.buffer", "128k")
+    sc.conf.set("spark.shuffle.io.maxRetries", "10")
+    sc.conf.set("spark.shuffle.io.retryWait", "60s")
+    sc.conf.set("spark.reducer.maxSizeInFlight", "96m")
   }
 
   private def loadAndCacheTable(sc: SparkSession, tableInfo: TableInfo): Unit = {
