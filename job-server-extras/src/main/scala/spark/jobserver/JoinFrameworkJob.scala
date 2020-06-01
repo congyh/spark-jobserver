@@ -4,28 +4,31 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{Row, SparkSession}
 import org.codehaus.jackson.map.ObjectMapper
 import org.scalactic._
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 import spark.jobserver.api.{JobEnvironment, ValidationProblem}
 
 import scala.io.Source
 
-/**
-  * Load dim table for sharing.
-  */
-object LoadDimTableJob extends SparkSessionJob {
+abstract class BaseSparkSessionJob extends SparkSessionJob {
 
-  type JobData = Config
+  override type JobData = Config
+  protected val logger: Logger = LoggerFactory.getLogger(getClass)
+
+  override def validate(spark: SparkSession, runtime: JobEnvironment, config: Config):
+    JobData Or Every[ValidationProblem] = Good(config)
+}
+
+/**
+  * Load and cache table for sharing within context.
+  */
+object LoadAndCacheTableJob extends BaseSparkSessionJob {
+
   type JobOutput = Unit
 
   private val configPath = "load_table_config.json"
   private val configStr: String = fileToString(configPath)
 
-  private val logger = LoggerFactory.getLogger(getClass)
-
-  def validate(spark: SparkSession, runtime: JobEnvironment, config: Config):
-  JobData Or Every[ValidationProblem] = Good(config)
-
-  def runJob(spark: SparkSession, runtime: JobEnvironment, config: JobData): JobOutput = {
+  override def runJob(spark: SparkSession, runtime: JobEnvironment, config: JobData): JobOutput = {
     prepareSparkSession(spark)
 
     val objectMapper = new ObjectMapper()
@@ -73,14 +76,11 @@ object LoadDimTableJob extends SparkSessionJob {
   * 2. If you want to use the cached table, you should refine the table name to match cached table name,
   *    usually the name is in the format of database name stripped (db_name.table_name -> table_name).
   */
-object RunSqlWithNoOutputJob extends SparkSessionJob {
-  type JobData = Config
+object RunSqlWithNoOutputJob extends BaseSparkSessionJob {
+
   type JobOutput = Unit
 
-  def validate(spark: SparkSession, runtime: JobEnvironment, config: Config):
-  JobData Or Every[ValidationProblem] = Good(config)
-
-  def runJob(spark: SparkSession, runtime: JobEnvironment, config: JobData): JobOutput = {
+  override def runJob(spark: SparkSession, runtime: JobEnvironment, config: JobData): JobOutput = {
     spark.sql(config.getString("sql"))
   }
 }
@@ -92,14 +92,26 @@ object RunSqlWithNoOutputJob extends SparkSessionJob {
  * 2. If you want to use the cached table, you should refine the table name to match cached table name,
  *    usually the name is in the format of database name stripped (db_name.table_name -> table_name).
  */
-object RunSqlWithOutputJob extends SparkSessionJob {
-  type JobData = Config
+object RunSqlWithOutputJob extends BaseSparkSessionJob {
+
   type JobOutput = Array[Row]
 
-  def validate(spark: SparkSession, runtime: JobEnvironment, config: Config):
-  JobData Or Every[ValidationProblem] = Good(config)
-
-  def runJob(spark: SparkSession, runtime: JobEnvironment, config: JobData): JobOutput = {
+  override def runJob(spark: SparkSession, runtime: JobEnvironment, config: JobData): JobOutput = {
     spark.sql(config.getString("sql")).collect()
+  }
+}
+
+/**
+ * Un-persist cache table.
+ */
+object UnPersistJob extends BaseSparkSessionJob {
+
+  type JobOutput = Unit
+
+  override def runJob(spark: SparkSession, runtime: JobEnvironment, config: JobData): JobOutput = {
+    val tempViewName = config.getString("tempViewName")
+    // Drop temp view before un-presist to prevent any un-persisted access.
+    spark.catalog.dropTempView(tempViewName)
+    spark.catalog.uncacheTable(config.getString("tempViewName"))
   }
 }
