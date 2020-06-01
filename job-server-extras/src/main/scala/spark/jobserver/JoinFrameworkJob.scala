@@ -1,9 +1,13 @@
 package spark.jobserver
 
 import com.typesafe.config.Config
-import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.sql.{Row, SparkSession}
+import org.codehaus.jackson.map.ObjectMapper
 import org.scalactic._
+import org.slf4j.LoggerFactory
 import spark.jobserver.api.{JobEnvironment, ValidationProblem}
+
+import scala.io.Source
 
 /**
   * Load dim table for sharing.
@@ -13,40 +17,45 @@ object LoadDimTableJob extends SparkSessionJob {
   type JobData = Config
   type JobOutput = Unit
 
-  private val getSkuTable =
-    """
-      |SELECT
-      |            max(division_id_new) as division_id_new,
-      |            max(division_name_new) as division_name_new,
-      |            max(pur_first_dept_cd) as ad_first_dept_id,
-      |            max(pur_first_dept_name) as ad_first_dept_name,
-      |            max(pur_second_dept_cd) as ad_second_dept_id,
-      |            max(pur_second_dept_name) as ad_second_dept_name,
-      |            max(pur_third_dept_cd) as ad_third_dept_id,
-      |            max(pur_third_dept_name) as ad_third_dept_name,
-      |            max(item_first_cate_cd) as item_first_cate_cd,
-      |            max(item_first_cate_name) as item_first_cate_name,
-      |            max(brand_code) as ad_sku_brand_code,
-      |            max(barndname_full) as ad_sku_brandname_full,
-      |            max(type) as type_raw,
-      |            item_sku_id AS sku_id
-      |        FROM
-      |            dim.dim_product_daily_item_sku
-      |        WHERE
-      |            dt = '2020-05-20' and dp = 'active'
-      |        group BY
-      |            item_sku_id
-      |        CLUSTER BY
-      |            sku_id
-      |""".stripMargin
+  private val configPath = "load_table_config.json"
+  private val configStr: String = fileToString(configPath)
+
+  private val logger = LoggerFactory.getLogger(getClass)
 
   def validate(spark: SparkSession, runtime: JobEnvironment, config: Config):
   JobData Or Every[ValidationProblem] = Good(config)
 
   def runJob(spark: SparkSession, runtime: JobEnvironment, config: JobData): JobOutput = {
-    val skuDf = spark.sql(s"$getSkuTable")
-    skuDf.createOrReplaceTempView("dim_product_daily_item_sku")
-    spark.catalog.cacheTable("dim_product_daily_item_sku")
+    val objectMapper = new ObjectMapper()
+    logger.info(s"configStr: $configStr")
+    val loadTableConfig: LoadTableConfig = objectMapper.readValue(configStr, classOf[LoadTableConfig])
+    logger.info(s"Parsed config: $loadTableConfig")
+
+    for (tableInfo <- loadTableConfig.getTables) {
+      loadAndCacheTable(spark, tableInfo)
+    }
+  }
+
+  private def loadAndCacheTable(sc: SparkSession, tableInfo: TableInfo): Unit = {
+    loadAndCacheTable(sc,
+      fileToString(tableInfo.getSqlFile), tableInfo.getTableName, tableInfo.getTempViewName)
+  }
+
+  private def loadAndCacheTable(
+    sc: SparkSession, loadTableSql: String, tableName: String, tempViewName: String = ""): Unit = {
+    val df = sc.sql(loadTableSql)
+    df.cache()
+    df.count()
+    val viewName = if (tempViewName.equals("")) {
+      tableName.substring(tableName.lastIndexOf(".") + 1)
+    } else {
+      tempViewName
+    }
+    df.createOrReplaceTempView(viewName)
+  }
+
+  private def fileToString(filePath: String): String = {
+    Source.fromInputStream(getClass.getClassLoader.getResourceAsStream(filePath)).getLines().mkString(" ")
   }
 }
 
