@@ -26,14 +26,21 @@ object LoadDimTableJob extends SparkSessionJob {
   JobData Or Every[ValidationProblem] = Good(config)
 
   def runJob(spark: SparkSession, runtime: JobEnvironment, config: JobData): JobOutput = {
+    prepareSparkSession(spark)
+
     val objectMapper = new ObjectMapper()
     logger.info(s"configStr: $configStr")
     val loadTableConfig: LoadTableConfig = objectMapper.readValue(configStr, classOf[LoadTableConfig])
     logger.info(s"Parsed config: $loadTableConfig")
-
     for (tableInfo <- loadTableConfig.getTables) {
       loadAndCacheTable(spark, tableInfo)
     }
+  }
+
+  private def prepareSparkSession(sc: SparkSession): Unit = {
+    sc.conf.set("spark.sql.adaptive.enabled", "true")
+    sc.conf.set("spark.sql.autoBroadcastJoinThreshold", "178257920")
+    sc.conf.set("spark.sql.files.ignoreCorruptFiles", "true")
   }
 
   private def loadAndCacheTable(sc: SparkSession, tableInfo: TableInfo): Unit = {
