@@ -2,6 +2,7 @@ package spark.jobserver
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.storage.StorageLevel
 import org.codehaus.jackson.map.ObjectMapper
 import org.scalactic._
 import org.slf4j.{Logger, LoggerFactory}
@@ -60,7 +61,7 @@ object LoadAndCacheTableJob extends BaseSparkSessionJob {
   private def loadAndCacheTable(
     sc: SparkSession, loadTableSql: String, tableName: String, tempViewName: String = ""): Unit = {
     val df = sc.sql(loadTableSql)
-    df.cache()
+    df.persist(StorageLevel.MEMORY_AND_DISK_SER)
     df.count()
     val viewName = if (tempViewName.equals("")) {
       tableName.substring(tableName.lastIndexOf(".") + 1)
