@@ -42,10 +42,8 @@ object LoadAndCacheTableJob extends BaseSparkSessionJob {
   }
 
   private def prepareSparkSession(sc: SparkSession): Unit = {
-    sc.conf.set("spark.sql.adaptive.enabled", "true")
-    sc.conf.set("spark.sql.adaptive.join.enabled", "true")
-    sc.conf.set("spark.sql.adaptive.skewedJoin.enabled", "true")
-
+    // TODO: Extract as config.
+    sc.conf.set("spark.sql.shuffle.partitions", "400")
     sc.conf.set("spark.sql.files.ignoreCorruptFiles", "true")
     sc.conf.set("spark.sql.autoBroadcastJoinThreshold", "178257920")
     sc.conf.set("spark.sql.broadcastTimeout", "1800")
