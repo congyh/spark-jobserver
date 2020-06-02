@@ -17,10 +17,10 @@ queryParams = {
 querystring = parse.urlencode(queryParams)
 
 form = {
-    "sql": "select 1"
+    "sql": "select * from dim_product_daily_item_sku limit 10"
 }
 
 # Make a POST request and read the response
 u = request.urlopen(url + '?' + querystring, data=json.dumps(form).encode("utf-8"))
-resp = u.read()
+resp = u.read().decode('utf-8')
 print(resp)
