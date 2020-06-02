@@ -29,6 +29,7 @@ DELETE /jobs/<jobId>     - Kills the specified job
 import json
 import logging
 import sys
+import time
 from functools import wraps
 from urllib import request, parse
 
@@ -40,8 +41,9 @@ def with_response(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         resp = func(*args, **kwargs).read().decode('utf-8')
-        logger.info("Response of {}: {}".format(func.__name__, resp))
+        logger.debug("Response of {}: {}".format(func.__name__, resp))
         return resp
+
     return wrapper
 
 
@@ -79,6 +81,7 @@ class ContextOperation(Operation):
 class JobOperation(Operation):
     def __init__(self):
         super().__init__("/jobs")
+        self.last_submit_id = ""
         self.default_context = Context("join-framework-context-0")
 
     @with_response
@@ -106,21 +109,44 @@ class JobOperation(Operation):
     def delete(self, id):
         pass
 
-    @with_response
-    def run_sql(self, sql, context=None, sync="false"):
-        """Run Sql in pre-created context
-
-        It is recommended that you load and cache large dim table first."""
-
+    def run_sql(self, sql, context=None, blocking=True):
         if context is None:
             context = self.default_context
 
+        submit_info_str = self.__run_sql_async(sql, context)
+
+        if not blocking:
+            return submit_info_str
+        else:
+            job_id = json.loads(submit_info_str)["jobId"]
+            self.last_submit_id = job_id
+            job_status = {}
+            while True:
+                job_status = json.loads(self.get_status(job_id))
+                running_status = job_status["status"]
+                if running_status != "FINISHED":
+                    logger.info("Job id: [{job_id}] not finished yet, now in status: [{job_status}]"
+                                   .format(job_id=job_id, job_status=running_status))
+                    time.sleep(10)
+                else:
+                    break
+
+            result = job_status["result"]
+            logger.info("Job id: [{job_id}] finished!".format(job_id=job_id))
+            logger.debug("Job id: [{job_id}] result: \n {result}.".format(job_id=job_id, result=result))
+            return result
+
+    @with_response
+    def __run_sql_async(self, sql, context=None):
+        """Run Sql in pre-created context
+
+        It is recommended that you load and cache large dim table first."""
         query_params = {
             # appName is the path variable of uploaded jar.
             'appName': 'join-framework',
             'classPath': 'spark.jobserver.RunSqlWithOutputJob',
             'context': context.name,
-            'sync': sync
+            'sync': "false"
         }
 
         query_string = parse.urlencode(query_params)
@@ -137,7 +163,7 @@ class JobOperation(Operation):
 if __name__ == "__main__":
     logging.basicConfig(
         format='%(asctime)s %(levelname)s %(name)s: %(message)s',
-        level=logging.INFO)
+        level=logging.DEBUG)
 
     context = None if len(sys.argv) < 2 else Context(sys.argv[1])
 
