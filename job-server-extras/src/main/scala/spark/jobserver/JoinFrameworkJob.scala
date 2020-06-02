@@ -61,7 +61,7 @@ object LoadAndCacheTableJob extends BaseSparkSessionJob {
   private def loadAndCacheTable(
     sc: SparkSession, loadTableSql: String, tableName: String, tempViewName: String = ""): Unit = {
     val df = sc.sql(loadTableSql)
-    df.persist(StorageLevel.MEMORY_AND_DISK_SER)
+    df.persist(StorageLevel.MEMORY_ONLY_SER)
     df.count()
     val viewName = if (tempViewName.equals("")) {
       tableName.substring(tableName.lastIndexOf(".") + 1)
@@ -117,7 +117,7 @@ object UnPersistJob extends BaseSparkSessionJob {
 
   override def runJob(spark: SparkSession, runtime: JobEnvironment, config: JobData): JobOutput = {
     val tempViewName = config.getString("tempViewName")
-    // Drop temp view before un-presist to prevent any un-persisted access.
+    // Drop temp view before un-persist to prevent any un-persisted access.
     spark.catalog.dropTempView(tempViewName)
     spark.catalog.uncacheTable(config.getString("tempViewName"))
   }
