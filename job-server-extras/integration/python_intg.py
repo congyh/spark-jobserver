@@ -93,7 +93,7 @@ class ContextOperation(Operation):
 
     @with_response
     @put_request
-    def put(self):
+    def reboot_all(self):
         return request.Request(self.url + "?reset=reboot?sync=false")
 
 
@@ -108,15 +108,24 @@ class JobOperation(Operation):
         return request.Request(self.url)
 
     @with_response
-    def get_info(self, id):
-        pass
+    def get_info(self, id=""):
+        """Get config of job (not running status)"""
+        return request.Request(self.url + "/" + self.__get_job_id(id) + "/config")
 
     @with_response
-    def get_status(self, id):
+    def get_status(self, id=""):
         """Get run info of job
 
         A typical use-case is to loop determine if a async job has finished."""
-        return request.Request(self.url + "/" + id)
+        return request.Request(self.url + "/" + self.__get_job_id(id))
+
+    def __get_job_id(self, id):
+        if len(id) > 0:
+            return id
+        elif len(self.last_submit_id) > 0:
+            return self.last_submit_id
+        else:
+            raise Exception("Job id required!")
 
     @with_response
     def create(self, context=None):
@@ -125,8 +134,8 @@ class JobOperation(Operation):
         pass
 
     @with_response
-    def delete(self, id):
-        pass
+    def delete(self, id=""):
+        return request.Request(self.url + "/" + self.__get_job_id(id))
 
     def run_sql(self, sql, context=None, blocking=True):
         if context is None:
