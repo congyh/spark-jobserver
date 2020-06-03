@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Contexts
+Context Operations
 
 GET /contexts               - lists all current contexts
 GET /contexts/<name>        - gets info about a context, such as the spark UI url
@@ -11,7 +11,7 @@ DELETE /contexts/<name>     - stops a context and all jobs running in it. Additi
 PUT /contexts?reset=reboot  - shuts down all contexts and re-loads only the contexts from config.
     Use ?sync=false to execute asynchronously.
 
-Jobs
+Job Operations
 
 Jobs submitted to the job server must implement a SparkJob trait. It has a main runJob method
 which is passed a SparkContext and a typesafe Config object. Results returned by the method
@@ -42,6 +42,7 @@ run_sql_with_output_classpath = "spark.jobserver.RunSqlWithOutputJob"
 
 
 def with_response(func):
+    """Read from request and decode"""
     @wraps(func)
     def wrapper(*args, **kwargs):
         resp = request.urlopen(func(*args, **kwargs)).read().decode('utf-8')
@@ -53,6 +54,7 @@ def with_response(func):
 
 
 def rest_request(request_type="GET"):
+    """Turn request to specified request type"""
     def decorate(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -93,6 +95,7 @@ def merge_dicts(default_dict, newer_dict):
 
 
 class Context:
+    """Context of spark-jobserver"""
     def __init__(self, name=default_context_name):
         self.name = name
 
@@ -133,6 +136,9 @@ class ContextOperation(RestOperation):
     @with_response
     @delete_request
     def delete(self, name):
+        """Stop a context
+
+        YARN app will be marked as FINISHED."""
         return request.Request(self.url + "/" + name)
 
     @with_response
@@ -177,6 +183,10 @@ class JobOperation(RestOperation):
             raise Exception("Job id required!")
 
     def run(self, query_params, blocking=True, form={}):
+        """Submit a job
+
+        Return immediately if blocking param is set to false or
+        waiting for job to finish."""
         job_submit_ret_str = self._run_async(query_params, form)
 
         if not blocking:
@@ -209,7 +219,7 @@ class JobOperation(RestOperation):
     def _run_async(self, query_params, form):
         """Run job in pre-created context
 
-        It is recommended that you load and cache large dim table first."""
+        It is recommended that you call load_and_cache_table first."""
         assert query_params is not None
         assert form is not None
 
@@ -234,10 +244,16 @@ class JobOperation(RestOperation):
         return self.run(query_params, blocking=blocking, form=form)
 
     def load_and_cache_table(self, context=None, blocking=False):
+        """Pre-load large table to specified context
+
+        All preceding query can benefit from cache."""
         query_params = {"classPath": load_and_cache_table_classpath}
         return self._run_built_in_job(query_params, context, blocking=blocking)
 
     def run_sql(self, sql, context=None, blocking=True):
+        """Run job in pre-created context
+
+        It is recommended that you call load_and_cache_table first."""
         query_params = {"classPath": run_sql_with_output_classpath}
         form = {"sql": sql}
 
