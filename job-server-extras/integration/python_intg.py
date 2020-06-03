@@ -45,6 +45,23 @@ def with_response(func):
     return wrapper
 
 
+def delete_request(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        req = func(*args, **kwargs)
+        req.get_method = lambda: "DELETE"
+        return req
+    return wrapper
+
+
+def put_request(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        req = func(*args, **kwargs)
+        req.get_method = lambda: "PUT"
+        return req
+    return wrapper
+
 class Context:
     def __init__(self, name="join-framework-context-0"):
         self.name = name
@@ -72,10 +89,14 @@ class ContextOperation(Operation):
         pass
 
     @with_response
+    @delete_request
     def delete(self, name):
-        req = request.Request(self.url + "/" + name)
-        req.get_method = lambda: "DELETE"
-        return request.urlopen(req)
+        return request.Request(self.url + "/" + name)
+
+    @with_response
+    @put_request
+    def put(self):
+        return request.Request(self.url + "?reset=reboot?sync=false")
 
 
 class JobOperation(Operation):
@@ -165,11 +186,13 @@ if __name__ == "__main__":
         format='%(asctime)s %(levelname)s %(name)s: %(message)s',
         level=logging.DEBUG)
 
-    context = None if len(sys.argv) < 2 else Context(sys.argv[1])
-
+    # context = None if len(sys.argv) < 2 else Context(sys.argv[1])
+    #
     context_operation = ContextOperation()
     context_operation.list()
+    #
+    # job_operation = JobOperation()
+    # sql = "select * from dim_product_daily_item_sku limit 10"
+    # job_operation.run_sql(sql=sql, context=context)
 
-    job_operation = JobOperation()
-    sql = "select * from dim_product_daily_item_sku limit 10"
-    job_operation.run_sql(sql=sql, context=context)
+    context_operation.delete("sql-context-0")
