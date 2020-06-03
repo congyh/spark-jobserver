@@ -24,6 +24,7 @@ POST /jobs               - Starts a new job, use ?sync=true to wait for results
 DELETE /jobs/<jobId>     - Kills the specified job
 """
 
+import copy
 import json
 import logging
 import sys
@@ -54,7 +55,9 @@ def rest_request(request_type="GET"):
             req = func(*args, **kwargs)
             req.get_method = lambda: request_type
             return req
+
         return wrapper
+
     return decorate
 
 
@@ -65,6 +68,24 @@ delete_request = partial(rest_request, request_type="DELETE")()
 
 def bool_to_lower_string(boolean_var):
     return str(boolean_var).lower()
+
+
+def merge_dicts(default_dict, newer_dict):
+    """Merge two dicts
+
+    merge rule::
+
+    default_dict = {'a': 1, 'b': 2}
+    newer_dict = {'b': 3, 'c': 4}
+
+    return:
+    {'a': 1, 'b': 3, 'c': 4}
+
+    """
+    ret_dict = copy.deepcopy(default_dict)
+    ret_dict.update(newer_dict)
+
+    return ret_dict
 
 
 class Context:
@@ -86,6 +107,7 @@ class RestOperation:
 class ContextOperation(RestOperation):
     def __init__(self):
         super().__init__("/contexts")
+        self._default_context = Context()
 
     @with_response
     def list(self):
@@ -97,7 +119,9 @@ class ContextOperation(RestOperation):
 
     @with_response
     @post_request
-    def create(self, name, query_params={}):
+    def create(self, name="", query_params={}):
+        if len(name) == 0:
+            name = self._default_context.name
         query_params["context-factory"] = "spark.jobserver.context.SessionContextFactory"
         query_string = self._encode_query_params(query_params)
         return request.Request(self.url + "/" + name + "?" + query_string)
@@ -118,6 +142,11 @@ class JobOperation(RestOperation):
         super().__init__("/jobs")
         self.last_submit_id = ""
         self._default_context = Context()
+        self._default_query_params = {
+            # appName is the path variable of uploaded jar.
+            'appName': 'join-framework',
+            'context': self._default_context.name
+        }
 
     @with_response
     def list(self):
@@ -143,11 +172,8 @@ class JobOperation(RestOperation):
         else:
             raise Exception("Job id required!")
 
-    def run(self, query_params, context=None, blocking=True, form={}):
-        if context is None:
-            context = self._default_context
-
-        job_submit_ret_str = self._run_async(query_params, context, form)
+    def run(self, query_params, blocking=True, form={}):
+        job_submit_ret_str = self._run_async(query_params, form)
 
         if not blocking:
             return job_submit_ret_str
@@ -175,12 +201,11 @@ class JobOperation(RestOperation):
             return result
 
     @with_response
-    def _run_async(self, query_params, context, form):
+    def _run_async(self, query_params, form):
         """Run job in pre-created context
 
         It is recommended that you load and cache large dim table first."""
         assert query_params is not None
-        assert context is not None
         assert form is not None
 
         query_params["sync"] = "false"
@@ -196,22 +221,22 @@ class JobOperation(RestOperation):
     def delete(self, id=""):
         return request.Request(self.url + "/" + self._get_job_id(id))
 
-    def run_sql(self, sql, context=None, blocking=True):
-        if context is None:
-            context = self._default_context
-
-        query_params = {
-            # appName is the path variable of uploaded jar.
-            'appName': 'join-framework',
-            'classPath': 'spark.jobserver.RunSqlWithOutputJob',
-            'context': context.name
-        }
-
-        form = {
-            "sql": sql
-        }
+    def _run_built_in_job(self, query_params, context, blocking=False, form={}):
+        if context is not None:
+            query_params["context"] = context.name
+        query_params = merge_dicts(self._default_query_params, query_params)
 
         return self.run(query_params, blocking=blocking, form=form)
+
+    def load_and_cache_table(self, context=None, blocking=False):
+        query_params = {"classPath": "spark.jobserver.LoadAndCacheTableJob"}
+        return self._run_built_in_job(query_params, context, blocking=blocking)
+
+    def run_sql(self, sql, context=None, blocking=True):
+        query_params = {"classPath": "spark.jobserver.RunSqlWithOutputJob"}
+        form = {"sql": sql}
+
+        return self._run_built_in_job(query_params, context, blocking=blocking, form=form)
 
 
 if __name__ == "__main__":
