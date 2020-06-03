@@ -40,7 +40,8 @@ def with_response(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         resp = request.urlopen(func(*args, **kwargs)).read().decode('utf-8')
-        logger.debug("Response of [{func_name}]: [{resp}]".format(func_name=func.__name__, resp=resp))
+        logger.debug("Response of [{func_name}]: [{resp}]".format(
+            func_name=func.__name__, resp=resp))
         return resp
 
     return wrapper
@@ -144,11 +145,12 @@ class JobOperation(RestOperation):
             while True:
                 job_status = json.loads(self.get_status(id=job_id))
                 running_status = job_status["status"]
-                if running_status != "FINISHED":
+                if running_status == "ERROR":
+                    raise Exception(job_status["result"])
+                elif running_status != "FINISHED":
                     logger.info("Job id: [{job_id}] not finished yet, now in status: [{job_status}]"
                                 .format(job_id=job_id, job_status=running_status))
                     time.sleep(10)
-                    # TODO: Handle other status.
                 else:
                     break
 
