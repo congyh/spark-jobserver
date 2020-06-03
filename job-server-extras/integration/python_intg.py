@@ -91,7 +91,6 @@ class ContextOperation(RestOperation):
     @with_response
     @delete_request
     def delete(self, name):
-        # TODO: Exception handling
         return request.Request(self.url + "/" + name)
 
     @with_response
