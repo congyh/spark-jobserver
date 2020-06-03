@@ -248,14 +248,14 @@ class JobOperation(RestOperation):
     def delete(self, id=""):
         return request.Request(self.url + "/" + self._get_job_id(id))
 
-    def _run_built_in_job(self, query_params, context, blocking=False, form={}):
+    def _run_built_in_job(self, query_params, context, blocking=True, form={}):
         if context is not None:
             query_params["context"] = context.name
         query_params = merge_dicts(self._default_query_params, query_params)
 
         return self.run(query_params, blocking=blocking, form=form)
 
-    def load_and_cache_table(self, context=None, blocking=False):
+    def load_and_cache_table(self, context=None, blocking=True):
         """Pre-load large table to specified context
 
         All preceding query can benefit from cache."""
