@@ -201,6 +201,7 @@ class JobOperation(RestOperation):
             return result
 
     @with_response
+    @post_request
     def _run_async(self, query_params, form):
         """Run job in pre-created context
 
@@ -210,11 +211,11 @@ class JobOperation(RestOperation):
 
         query_params["sync"] = "false"
         query_string = self._encode_query_params(query_params)
+        logger.debug("Form: [{form}]".format(form=form))
 
         if len(form) == 0:
             return request.Request(self.url + '?' + query_string)
         else:
-            # Make a POST request
             return request.Request(self.url + '?' + query_string, data=json.dumps(form).encode("utf-8"))
 
     @with_response
@@ -250,7 +251,8 @@ if __name__ == "__main__":
     context_operation.list()
 
     job_operation = JobOperation()
-    sql = "select * from dim_product_daily_item_sku limit 10"
-    job_operation.run_sql(sql=sql, context=context)
+    job_operation.load_and_cache_table()
+    # sql = "select * from dim_product_daily_item_sku limit 10"
+    # job_operation.run_sql(sql=sql, context=context)
 
     # context_operation.delete("sql-context-0")
