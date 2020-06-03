@@ -147,12 +147,14 @@ class JobOperation(RestOperation):
                 running_status = job_status["status"]
                 if running_status == "ERROR":
                     raise Exception(job_status["result"])
-                elif running_status != "FINISHED":
+                elif running_status in ["STARTED", "RUNNING"]:
                     logger.info("Job id: [{job_id}] not finished yet, now in status: [{job_status}]"
                                 .format(job_id=job_id, job_status=running_status))
                     time.sleep(10)
-                else:
+                elif running_status == "FINISHED":
                     break
+                else:
+                    raise Exception(job_status["status"] if "result" not in job_status else job_status["result"])
 
             result = job_status["result"]
             logger.info("Job id: [{job_id}] finished!".format(job_id=job_id))
