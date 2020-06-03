@@ -58,6 +58,7 @@ def rest_request(request_type="GET"):
     return decorate
 
 
+post_request = partial(rest_request, request_type="POST")()
 put_request = partial(rest_request, request_type="PUT")()
 delete_request = partial(rest_request, request_type="DELETE")()
 
@@ -75,6 +76,12 @@ class RestOperation:
     def __init__(self, category=""):
         self.url = base_url + category
 
+    @staticmethod
+    def _encode_query_params(query_params):
+        query_string = parse.urlencode(query_params)
+        logger.debug("Encoded query string: [{query_str}]".format(query_str=query_string))
+        return query_string
+
 
 class ContextOperation(RestOperation):
     def __init__(self):
@@ -89,8 +96,11 @@ class ContextOperation(RestOperation):
         return request.Request(self.url + "/" + name)
 
     @with_response
-    def create(self, name):
-        pass
+    @post_request
+    def create(self, name, query_params={}):
+        query_params["context-factory"] = "spark.jobserver.context.SessionContextFactory"
+        query_string = self._encode_query_params(query_params)
+        return request.Request(self.url + "/" + name + "?" + query_string)
 
     @with_response
     @delete_request
@@ -174,8 +184,7 @@ class JobOperation(RestOperation):
         assert form is not None
 
         query_params["sync"] = "false"
-        query_string = parse.urlencode(query_params)
-        logger.debug("Encoded query string: [{query_str}]".format(query_str=query_string))
+        query_string = self._encode_query_params(query_params)
 
         if len(form) == 0:
             return request.Request(self.url + '?' + query_string)
