@@ -96,7 +96,7 @@ class ContextOperation(RestOperation):
     @with_response
     @put_request
     def reboot_all(self):
-        return request.Request(self.url + "?reset=reboot?sync=false")
+        return request.Request(self.url + "?reset=reboot&sync=false")
 
 
 class JobOperation(RestOperation):
