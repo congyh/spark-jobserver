@@ -35,6 +35,10 @@ from urllib import request, parse
 
 logger = logging.getLogger("join_framework")
 base_url = "http://10.198.47.106:8090"
+default_context_name = "join-framework-context-0"
+default_app_name = "join-framework"
+load_and_cache_table_classpath = "spark.jobserver.LoadAndCacheTableJob"
+run_sql_with_output_classpath = "spark.jobserver.RunSqlWithOutputJob"
 
 
 def with_response(func):
@@ -89,7 +93,7 @@ def merge_dicts(default_dict, newer_dict):
 
 
 class Context:
-    def __init__(self, name="join-framework-context-0"):
+    def __init__(self, name=default_context_name):
         self.name = name
 
 
@@ -144,8 +148,8 @@ class JobOperation(RestOperation):
         self._default_context = Context()
         self._default_query_params = {
             # appName is the path variable of uploaded jar.
-            'appName': 'join-framework',
-            'context': self._default_context.name
+            "appName": default_app_name,
+            "context": self._default_context.name
         }
 
     @with_response
@@ -230,11 +234,11 @@ class JobOperation(RestOperation):
         return self.run(query_params, blocking=blocking, form=form)
 
     def load_and_cache_table(self, context=None, blocking=False):
-        query_params = {"classPath": "spark.jobserver.LoadAndCacheTableJob"}
+        query_params = {"classPath": load_and_cache_table_classpath}
         return self._run_built_in_job(query_params, context, blocking=blocking)
 
     def run_sql(self, sql, context=None, blocking=True):
-        query_params = {"classPath": "spark.jobserver.RunSqlWithOutputJob"}
+        query_params = {"classPath": run_sql_with_output_classpath}
         form = {"sql": sql}
 
         return self._run_built_in_job(query_params, context, blocking=blocking, form=form)
