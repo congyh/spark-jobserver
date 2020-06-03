@@ -31,7 +31,7 @@ import sys
 import time
 from functools import partial
 from functools import wraps
-from urllib import request, parse
+from urllib import request, parse, error
 
 logger = logging.getLogger("join_framework")
 base_url = "http://10.198.47.106:8090"
@@ -41,8 +41,24 @@ load_and_cache_table_classpath = "spark.jobserver.LoadAndCacheTableJob"
 run_sql_with_output_classpath = "spark.jobserver.RunSqlWithOutputJob"
 
 
+def retry(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        for i in range(3):
+            try:
+                return func(*args, **kwargs)
+            except error.HTTPError as e:
+                logger.warning("Exception thrown when running [{func_name}], "
+                               "retrying after 3s...".format(func_name=func.__name__))
+                logger.warning(e)
+                time.sleep(3)
+
+    return wrapper
+
+
 def with_response(func):
     """Read from request and decode to json"""
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         resp = json.loads(request.urlopen(func(*args, **kwargs)).read().decode('utf-8'))
@@ -55,6 +71,7 @@ def with_response(func):
 
 def rest_request(request_type="GET"):
     """Turn request to specified request type"""
+
     def decorate(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -96,6 +113,7 @@ def merge_dicts(default_dict, newer_dict):
 
 class Context:
     """Context of spark-jobserver"""
+
     def __init__(self, name=default_context_name):
         self.name = name
 
@@ -153,6 +171,7 @@ class ContextOperation(RestOperation):
         YARN app will be marked as FINISHED."""
         return request.Request(self.url + "/" + name)
 
+    @retry
     @with_response
     @put_request
     def clear_all(self, blocking=False):
@@ -179,6 +198,7 @@ class JobOperation(RestOperation):
         """Get config of job (not running status)"""
         return request.Request(self.url + "/" + self._get_job_id(id) + "/config")
 
+    @retry
     @with_response
     def get_status(self, id=""):
         """Get run info of job
