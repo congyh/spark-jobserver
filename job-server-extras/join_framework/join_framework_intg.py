@@ -133,6 +133,18 @@ class ContextOperation(RestOperation):
         query_string = self._encode_query_params(query_params)
         return request.Request(self.url + "/" + name + "?" + query_string)
 
+    def create_default(self):
+        query_params = {
+            "num-cpu-cores": "8",
+            "memory-per-node": "40G",
+            "launcher.spark.driver.memory": "16g",
+            "launcher.spark.dynamicAllocation.enabled": "false",
+            "launcher.spark.executor.instances": "25",
+            "launcher.spark.executor.cores": "8",
+            "launcher.spark.yarn.executor.memoryOverhead": "6144",
+        }
+        return self.create(query_params=query_params)
+
     @with_response
     @delete_request
     def delete(self, name):
@@ -143,7 +155,7 @@ class ContextOperation(RestOperation):
 
     @with_response
     @put_request
-    def reboot_all(self, blocking=False):
+    def clear_all(self, blocking=False):
         return request.Request(self.url + "?reset=reboot&sync=" + bool_to_lower_string(blocking))
 
 
