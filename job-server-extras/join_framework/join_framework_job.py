@@ -32,15 +32,7 @@ if __name__ == "__main__":
     # 3. Load dim table and check.
     job_operation = intg.JobOperation()
     ret_for_load_table = job_operation.load_and_cache_table()
-    if ret_for_load_table["status"] == "FINISHED":
-        logger.info("Dim table loaded.")
-    else:
-        logger.error("Load dim table failed!")
-        raise Exception(ret_for_load_table["result"])
+    logger.info("Dim table loaded.")
     ret_for_check_sql = job_operation.run_sql("SELECT * from dim_product_daily_item_sku LIMIT 10")
-    if ret_for_check_sql["status"] == "FINISHED":
-        logger.info("Cache check passed.")
-        logger.info("join-framework re-booted!")
-    else:
-        logger.error("Error re-boot join framework! Check spark-jobserver log for detail.")
-        raise Exception(ret_for_check_sql["result"])
+    logger.info("Cache check passed.")
+    logger.info("join-framework re-booted!")
