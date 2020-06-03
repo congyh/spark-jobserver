@@ -42,10 +42,10 @@ run_sql_with_output_classpath = "spark.jobserver.RunSqlWithOutputJob"
 
 
 def with_response(func):
-    """Read from request and decode"""
+    """Read from request and decode to json"""
     @wraps(func)
     def wrapper(*args, **kwargs):
-        resp = request.urlopen(func(*args, **kwargs)).read().decode('utf-8')
+        resp = json.loads(request.urlopen(func(*args, **kwargs)).read().decode('utf-8'))
         logger.debug("Response of [{func_name}]: [{resp}]".format(
             func_name=func.__name__, resp=resp))
         return resp
@@ -187,16 +187,16 @@ class JobOperation(RestOperation):
 
         Return immediately if blocking param is set to false or
         waiting for job to finish."""
-        job_submit_ret_str = self._run_async(query_params, form)
+        job_submit_ret = self._run_async(query_params, form)
 
         if not blocking:
-            return job_submit_ret_str
+            return job_submit_ret
         else:
-            job_id = json.loads(job_submit_ret_str)["jobId"]
+            job_id = job_submit_ret["jobId"]
             self.last_submit_id = job_id
             job_status = {}
             while True:
-                job_status = json.loads(self.get_status(id=job_id))
+                job_status = self.get_status(id=job_id)
                 running_status = job_status["status"]
                 if running_status == "ERROR":
                     raise Exception(job_status["result"])
