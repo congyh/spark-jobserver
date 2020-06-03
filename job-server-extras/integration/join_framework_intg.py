@@ -62,6 +62,10 @@ put_request = partial(rest_request, request_type="PUT")()
 delete_request = partial(rest_request, request_type="DELETE")()
 
 
+def bool_to_lower_string(boolean_var):
+    return str(boolean_var).lower()
+
+
 class Context:
     def __init__(self, name="join-framework-context-0"):
         self.name = name
@@ -95,8 +99,8 @@ class ContextOperation(RestOperation):
 
     @with_response
     @put_request
-    def reboot_all(self):
-        return request.Request(self.url + "?reset=reboot&sync=false")
+    def reboot_all(self, blocking=False):
+        return request.Request(self.url + "?reset=reboot&sync=" + bool_to_lower_string(blocking))
 
 
 class JobOperation(RestOperation):
@@ -169,6 +173,7 @@ class JobOperation(RestOperation):
         assert context is not None
         assert form is not None
 
+        query_params["sync"] = "false"
         query_string = parse.urlencode(query_params)
         logger.debug("Encoded query string: [{query_str}]".format(query_str=query_string))
 
@@ -190,8 +195,7 @@ class JobOperation(RestOperation):
             # appName is the path variable of uploaded jar.
             'appName': 'join-framework',
             'classPath': 'spark.jobserver.RunSqlWithOutputJob',
-            'context': context.name,
-            'sync': "false"
+            'context': context.name
         }
 
         form = {
