@@ -26,8 +26,8 @@ DELETE /jobs/<jobId>     - Kills the specified job
 
 import json
 import logging
-import sys
 import time
+from functools import partial
 from functools import wraps
 from urllib import request, parse
 
@@ -45,22 +45,20 @@ def with_response(func):
     return wrapper
 
 
-def delete_request(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        req = func(*args, **kwargs)
-        req.get_method = lambda: "DELETE"
-        return req
-    return wrapper
+def rest_request(request_type="GET"):
+    def decorate(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            req = func(*args, **kwargs)
+            req.get_method = lambda: request_type
+            return req
+        return wrapper
+    return decorate
 
 
-def put_request(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        req = func(*args, **kwargs)
-        req.get_method = lambda: "PUT"
-        return req
-    return wrapper
+put_request = partial(rest_request, request_type="PUT")()
+delete_request = partial(rest_request, request_type="DELETE")()
+
 
 class Context:
     def __init__(self, name="join-framework-context-0"):
