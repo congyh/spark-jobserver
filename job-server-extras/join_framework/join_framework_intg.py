@@ -239,7 +239,7 @@ class JobOperation(RestOperation):
                 elif running_status == "FINISHED":
                     break
                 else:
-                    raise Exception(job_status["status"] if "result" not in job_status else job_status["result"])
+                    raise Exception(job_status["result"])
 
             result = job_status["result"]
             logger.info("Job id: [{job_id}] finished!".format(job_id=job_id))
