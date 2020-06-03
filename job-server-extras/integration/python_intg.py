@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# TODO: python2 compatible.
-
 """
 Contexts
 
@@ -40,7 +38,7 @@ base_url = "http://10.198.47.106:8090"
 def with_response(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        resp = func(*args, **kwargs).read().decode('utf-8')
+        resp = request.urlopen(func(*args, **kwargs)).read().decode('utf-8')
         logger.debug("Response of {}: {}".format(func.__name__, resp))
         return resp
 
@@ -63,11 +61,11 @@ class ContextOperation(Operation):
 
     @with_response
     def list(self):
-        return request.urlopen(self.url)
+        return request.Request(self.url)
 
     @with_response
-    def get_config(self, name):
-        pass
+    def get_info(self, name):
+        return request.Request(self.url + "/" + name)
 
     @with_response
     def create(self, name):
@@ -75,7 +73,9 @@ class ContextOperation(Operation):
 
     @with_response
     def delete(self, name):
-        pass
+        req = request.Request(self.url + "/" + name)
+        req.get_method = lambda: "DELETE"
+        return request.urlopen(req)
 
 
 class JobOperation(Operation):
@@ -86,10 +86,10 @@ class JobOperation(Operation):
 
     @with_response
     def list(self):
-        return request.urlopen(self.url)
+        return request.Request(self.url)
 
     @with_response
-    def get_config(self, id):
+    def get_info(self, id):
         pass
 
     @with_response
@@ -97,7 +97,7 @@ class JobOperation(Operation):
         """Get run info of job
 
         A typical use-case is to loop determine if a async job has finished."""
-        return request.urlopen(self.url + "/" + id)
+        return request.Request(self.url + "/" + id)
 
     @with_response
     def create(self, context=None):
@@ -113,12 +113,12 @@ class JobOperation(Operation):
         if context is None:
             context = self.default_context
 
-        submit_info_str = self.__run_sql_async(sql, context)
+        submit_ret_str = self.__run_sql_async(sql, context)
 
         if not blocking:
-            return submit_info_str
+            return submit_ret_str
         else:
-            job_id = json.loads(submit_info_str)["jobId"]
+            job_id = json.loads(submit_ret_str)["jobId"]
             self.last_submit_id = job_id
             job_status = {}
             while True:
@@ -157,7 +157,7 @@ class JobOperation(Operation):
         }
 
         # Make a POST request
-        return request.urlopen(self.url + '?' + query_string, data=json.dumps(form).encode("utf-8"))
+        return request.Request(self.url + '?' + query_string, data=json.dumps(form).encode("utf-8"))
 
 
 if __name__ == "__main__":
