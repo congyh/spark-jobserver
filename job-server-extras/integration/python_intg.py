@@ -141,12 +141,12 @@ class JobOperation(Operation):
         if context is None:
             context = self.default_context
 
-        submit_ret_str = self.__run_sql_async(sql, context)
+        job_submit_ret_str = self.__run_sql_async(sql, context)
 
         if not blocking:
-            return submit_ret_str
+            return job_submit_ret_str
         else:
-            job_id = json.loads(submit_ret_str)["jobId"]
+            job_id = json.loads(job_submit_ret_str)["jobId"]
             self.last_submit_id = job_id
             job_status = {}
             while True:
