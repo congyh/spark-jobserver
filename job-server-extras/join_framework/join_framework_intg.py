@@ -6,7 +6,7 @@ Usage:
 
 >>> import join_framework_intg as intg
 >>> job_operation = intg.JobOperation()
->>> job_operation.run_sql("some_sql_context")
+>>> job_operation.run_sql("SELECT * from dim_product_daily_item_sku LIMIT 10")
 
 If you want to use the pre-loaded dim table, you should drop the database prefix of table name, say
 if you get `dim.dim_product_daily_item_sku`, change it to `dim_product_daily_item_sku`, and the job
