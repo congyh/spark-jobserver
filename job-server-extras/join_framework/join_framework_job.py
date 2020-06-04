@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
+"""
+join-framework context management
+
+This script will reboot all managed contexts on daily running.
+
+1. This script should dependent on the buffalo task of loaded dim table;
+2. Other task should dependent on this script to make sure dim table loaded.
+"""
 
 import time
 import logging
 
 from . import join_framework_intg as intg
 
-logger = logging.getLogger("join_framework")
+logger = logging.getLogger("join-framework")
 
 if __name__ == "__main__":
     logging.basicConfig(

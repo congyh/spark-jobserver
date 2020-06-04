@@ -1,5 +1,19 @@
 #!/usr/bin/env python3
 """
+join-framework Integration for Python.
+
+Usage:
+
+>>> import join_framework_intg as intg
+>>> job_operation = intg.JobOperation()
+>>> job_operation.run_sql("some_sql_context")
+
+If you want to use the pre-loaded dim table, you should drop the database prefix of table name, say
+if you get `dim.dim_product_daily_item_sku`, change it to `dim_product_daily_item_sku`, and the job
+will use pre-loaded table to accelerate running.
+
+All supported operations:
+
 Context Operations
 
 GET /contexts               - lists all current contexts
@@ -33,7 +47,7 @@ from functools import partial
 from functools import wraps
 from urllib import request, parse, error
 
-logger = logging.getLogger("join_framework")
+logger = logging.getLogger("join-framework")
 base_url = "http://10.198.47.106:8090"
 default_context_name = "join-framework-context-0"
 default_app_name = "join-framework"
