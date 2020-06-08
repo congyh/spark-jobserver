@@ -49,8 +49,10 @@ class ManagerLauncher(systemConfig: Config, contextConfig: Config, masterAddress
 
       val contextSparkMaster = Try(contextConfig.getString("launcher.spark.master"))
         .getOrElse(SparkMasterProvider.fromConfig(systemConfig).getSparkMaster(systemConfig))
+      logger.info(s"contextSparkMaster: $contextSparkMaster")
       launcher.setMaster(contextSparkMaster)
       launcher.setMainClass("spark.jobserver.JobManager")
+      // Note: args is here.
       launcher.addAppArgs(masterAddress, contextActorName, getEnvironmentVariable("MANAGER_CONF_FILE"))
       launcher.addSparkArg("--conf", s"spark.executor.extraJavaOptions=$loggingOpts")
       launcher.addSparkArg("--driver-java-options",

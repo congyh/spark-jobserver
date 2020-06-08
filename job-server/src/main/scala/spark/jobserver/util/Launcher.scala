@@ -42,7 +42,8 @@ abstract class Launcher(config: Config, sparkLauncher: SparkLauncher, enviornmen
         addCustomArguments()
 
         logger.info("Start launcher application")
-        handler = launcher.startApplication()
+        handler = launcher.startApplication() // Note: Entry point
+        logger.info(s"launcher: $launcher")
         (true, "")
       } catch {
         case err: Exception =>
@@ -57,9 +58,13 @@ abstract class Launcher(config: Config, sparkLauncher: SparkLauncher, enviornmen
 
     private def initSparkLauncher() {
       logger.info("Initializing spark launcher")
-      launcher.setSparkHome(getEnvironmentVariable("SPARK_HOME"))
+      val sparkHome = getEnvironmentVariable("SPARK_HOME")
+      launcher.setSparkHome(sparkHome)
+      logger.info(s"SPARK_HOME: $sparkHome")
       launcher.setDeployMode(deployMode)
+      logger.info(s"deployMode: $deployMode")
       launcher.setAppResource(sjsJarPath)
+      logger.info(s"sjsJarPath: $sjsJarPath")
       launcher.setVerbose((getEnvironmentVariable("SPARK_LAUNCHER_VERBOSE") == "1"))
       launcher.setConf("spark.master.rest.enabled", "true")
     }

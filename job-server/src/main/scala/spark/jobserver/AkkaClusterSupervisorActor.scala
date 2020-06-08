@@ -143,7 +143,7 @@ class AkkaClusterSupervisorActor(daoActor: ActorRef, dataManagerActor: ActorRef,
   }
 
   def wrappedReceive: Receive = {
-    case state: CurrentClusterState =>
+    case state: CurrentClusterState => // Note: Can reach here
       lazy val members = StringBuilder.newBuilder
       state.members.foreach(m => members.append(m.address.toString).append(" "))
       logger.info(s"Current Akka cluster has members ${members.toString()}")
@@ -159,8 +159,10 @@ class AkkaClusterSupervisorActor(daoActor: ActorRef, dataManagerActor: ActorRef,
       }
 
     case MemberUp(member) =>
+      logger.info(s"Received MemberUp message! member.roles: ${member.roles}")
       if (member.hasRole("manager")) {
         val memberActors = RootActorPath(member.address) / "user" / "*"
+        logger.info(s"memberActors: $memberActors")
         context.actorSelection(memberActors) ! Identify(memberActors)
       }
 
@@ -266,7 +268,7 @@ class AkkaClusterSupervisorActor(daoActor: ActorRef, dataManagerActor: ActorRef,
         case None => originator ! UnexpectedError
       }
 
-    case AddContext(name, contextConfig) =>
+    case AddContext(name, contextConfig) => // Note: Entry point
       val originator = sender()
       val mergedConfig = contextConfig.withFallback(defaultContextConfig)
       val resp = getActiveContextByName(name)

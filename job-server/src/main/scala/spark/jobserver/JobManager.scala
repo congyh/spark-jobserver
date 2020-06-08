@@ -152,7 +152,7 @@ object JobManager {
 
     def makeManagerSystem(name: String)(config: Config): ActorSystem = {
       val configWithRole = config.withValue("akka.cluster.roles",
-        ConfigValueFactory.fromIterable(List("manager").asJava))
+        ConfigValueFactory.fromIterable(List("manager").asJava)) // Note: Config as manager role
       ActorSystem(name, configWithRole)
     }
 
