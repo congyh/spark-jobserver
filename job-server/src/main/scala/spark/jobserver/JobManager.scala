@@ -52,8 +52,10 @@ object JobManager {
     var systemConfig = loadedConfig.withFallback(defaultConfig)
     val master = Try(systemConfig.getString("spark.master")).toOption
       .getOrElse("local[4]").toLowerCase()
+    logger.info(s"Master: $master")
     val deployMode = Try(systemConfig.getString("spark.submit.deployMode")).toOption
       .getOrElse("client").toLowerCase()
+    logger.info(s"Deploy mode: $deployMode")
 
     val config = if (deployMode == "cluster") {
       Try(getNetworkAddress(systemConfig)) match {

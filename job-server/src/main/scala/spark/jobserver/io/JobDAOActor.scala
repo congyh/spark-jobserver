@@ -81,58 +81,75 @@ class JobDAOActor(dao: JobDAO) extends InstrumentedActor {
 
   def wrappedReceive: Receive = {
     case SaveBinary(appName, binaryType, uploadTime, jarBytes) =>
+      logger.info(s"Received SaveBinary")
       val recipient = sender()
       Future {
         dao.saveBinary(appName, binaryType, uploadTime, jarBytes)
       }.onComplete(recipient ! SaveBinaryResult(_))
 
     case DeleteBinary(appName) =>
+      logger.info(s"Received DeleteBinary")
       sender ! DeleteBinaryResult(Try(dao.deleteBinary(appName)))
 
     case GetApps(typeFilter) =>
+      logger.info(s"Received GetApps")
       dao.getApps.map(apps => Apps(typeFilter.map(t => apps.filter(_._2._1 == t)).getOrElse(apps))).
         pipeTo(sender)
 
     case GetBinaryPath(appName, binType, uploadTime) =>
+      logger.info(s"Received GetBinaryPath")
       sender() ! BinaryPath(dao.getBinaryFilePath(appName, binType, uploadTime))
 
     case GetJobsByBinaryName(binName, statuses) =>
+      logger.info(s"Received GetJobsByBinaryName")
       dao.getJobsByBinaryName(binName, statuses).map(JobInfos).pipeTo(sender)
 
     case SaveContextInfo(contextInfo) =>
+      logger.info(s"Received SaveContextInfo")
       saveContextAndRespond(sender, contextInfo)
 
     case GetContextInfo(id) =>
+      logger.info(s"Received GetContextInfo")
       dao.getContextInfo(id).map(ContextResponse).pipeTo(sender)
 
     case GetContextInfoByName(name) =>
+      logger.info(s"Received GetContextInfoByName")
       dao.getContextInfoByName(name).map(ContextResponse).pipeTo(sender)
 
     case GetContextInfos(limit, statuses) =>
+      logger.info(s"Received GetContextInfos")
       dao.getContextInfos(limit, statuses).map(ContextInfos).pipeTo(sender)
 
     case SaveJobInfo(jobInfo) =>
+      logger.info(s"Received SaveJobInfo")
       dao.saveJobInfo(jobInfo)
 
     case GetJobInfos(limit) =>
+      logger.info(s"Received GetJobInfos")
       dao.getJobInfos(limit).map(JobInfos).pipeTo(sender)
 
     case SaveJobConfig(jobId, jobConfig) =>
+      logger.info(s"Received SaveJobConfig")
       dao.saveJobConfig(jobId, jobConfig)
 
     case GetJobConfig(jobId) =>
+      logger.info(s"Received GetJobConfig")
       dao.getJobConfig(jobId).map(JobConfig).pipeTo(sender)
 
     case GetLastBinaryInfo(appName) =>
+      logger.info(s"Received GetLastBinaryInfo")
       sender() ! LastBinaryInfo(dao.getBinaryInfo(appName))
 
     case CleanContextJobInfos(contextId, endTime) =>
+      logger.info(s"Received CleanContextJobInfos")
       dao.cleanRunningJobInfosForContext(contextId, endTime)
 
     case GetJobInfosByContextId(contextId, jobStatuses) =>
+      logger.info(s"Received GetJobInfosByContextId")
       dao.getJobInfosByContextId(contextId, jobStatuses).map(JobInfos).pipeTo(sender)
 
     case UpdateContextById(contextId: String, attributes: ContextModifiableAttributes) =>
+      logger.info(s"Received UpdateContextById")
       val recipient = sender()
       dao.getContextInfo(contextId).map(ContextResponse).onComplete {
         case Success(ContextResponse(Some(contextInfo))) =>
@@ -146,6 +163,7 @@ class JobDAOActor(dao: JobDAO) extends InstrumentedActor {
       }
 
     case GetBinaryInfosForCp(cp) =>
+      logger.info(s"Received GetBinaryInfosForCp")
       val recipient = sender()
       val currentTime = DateTime.now()
       Try {

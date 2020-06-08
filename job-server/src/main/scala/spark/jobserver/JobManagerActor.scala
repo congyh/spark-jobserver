@@ -367,7 +367,9 @@ class JobManagerActor(daoActor: ActorRef, supervisorActorAddress: String, contex
         }
         factory = getContextFactory()
         // Add defaults or update the config according to a specific context
+        logger.info(s"contextConfig: $contextConfig")
         contextConfig = factory.updateConfig(contextConfig)
+        logger.info(s"config: $config")
         jobContext = factory.makeContext(config, contextConfig, contextName)
         jobContext.sparkContext.addSparkListener(sparkListener)
         sparkEnv = SparkEnv.get
@@ -703,6 +705,7 @@ class JobManagerActor(daoActor: ActorRef, supervisorActorAddress: String, contex
   def getContextFactory(): SparkContextFactory = {
     val factoryClassName = contextConfig.getString("context-factory")
     val factoryClass = jarLoader.loadClass(factoryClassName)
+    logger.info(s"factoryClassName: $factoryClassName")
     val factory = factoryClass.newInstance.asInstanceOf[SparkContextFactory]
     Thread.currentThread.setContextClassLoader(jarLoader)
     factory
