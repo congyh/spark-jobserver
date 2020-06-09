@@ -80,7 +80,9 @@ object JobManager {
       systemConfig
     }
 
-    val system = makeSystem(config.resolve())
+    val configForMakeSystem = config.resolve()
+    logger.info(s"configForMakeSystem: $configForMakeSystem")
+    val system = makeSystem(configForMakeSystem)
     val clazz = Class.forName(config.getString("spark.jobserver.jobdao"))
     val ctor = clazz.getDeclaredConstructor(Class.forName("com.typesafe.config.Config"))
     val jobDAO = ctor.newInstance(config).asInstanceOf[JobDAO]
