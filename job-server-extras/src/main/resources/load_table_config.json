@@ -1,9 +1,0 @@
-{
-    "tables": [
-        {
-            "tableName": "dim.dim_product_daily_item_sku",
-            "sqlFile": "dim.dim_product_daily_item_sku.sql",
-            "tempViewName": "dim_product_daily_item_sku"
-        }
-    ]
-}
